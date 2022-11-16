@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - release_python_mac0.6.5
     paths-ignore:
       - "docs/**"
       - "demo/**"
@@ -76,68 +77,6 @@ jobs:
           VERSION=${VERSION#v}
           ./java/prepare_release.sh "$VERSION"
 
-      - name: build jsdk
-        run: |
-          make build
-
-      - name: upload linux library
-        if: github.event_name == 'push'
-        uses: actions/upload-artifact@v2
-        with:
-          name: shared-library-${{ github.sha }}
-          path: |
-            java/openmldb-native/src/main/resources/libsql_jsdk.so
-            java/hybridse-native/src/main/resources/libhybridse_jsdk_core.so
-
-      - name: start services
-        run: |
-          sh steps/ut_zookeeper.sh start
-          sh steps/download_openmldb_spark.sh $SPARK_HOME
-          cd onebox && sh start_onebox.sh && sh start_onebox.sh standalone && cd - || exit
-
-      - name: run java modules smoke test
-        working-directory: java
-        run: |
-          ./mvnw --batch-mode test
-
-      - name: upload java ut results
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: linux-ut-result-java-${{ github.sha }}
-          path: |
-            java/*/target/**/TEST-*.xml
-
-      - name: deploy
-        if: github.event_name == 'push'
-        working-directory: java
-        run: |
-          ./mvnw --batch-mode deploy -DskipTests=true -Dscalatest.skip=true
-        env:
-          MAVEN_OPTS: -Duser.home=/github/home
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: maven coverage
-        working-directory: java
-        run: |
-          ./mvnw --batch-mode prepare-package
-          ./mvnw --batch-mode scoverage:report
-
-      - name: upload maven coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: java/**/target/site/jacoco/jacoco.xml,java/**/target/scoverage.xml
-          name: coverage-java
-          fail_ci_if_error: true
-          verbose: true
-
-      - name: stop services
-        run: |
-          cd onebox && ./stop_all.sh && cd - || exit
-          sh steps/ut_zookeeper.sh stop
-
   java-sdk-mac:
     # mac job for java sdk. steps are almost same with job 'java-sdk'
     # except mvn deploy won't target all modules, just hybridse-native & openmldb-native
@@ -169,72 +108,6 @@ jobs:
             thirdsrc
           key: ${{ runner.os }}-thirdparty-${{ hashFiles('third-party/**/CMakeLists.txt', 'third-party/**/*.cmake', 'third-party/**/*.sh') }}
 
-      - name: prepare release
-        if: github.event_name == 'push'
-        run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          VERSION=${VERSION#v}
-          VARIANT_TYPE=macos ./java/prepare_release.sh "$VERSION"
-
-      - uses: actions/setup-java@v2
-        with:
-          distribution: "adopt"
-          java-version: "8"
-          server-id: ossrh
-          server-username: MAVEN_USERNAME
-          server-password: MAVEN_TOKEN
-          gpg-passphrase: GPG_PASSPHRASE # env variable for GPG private key passphrase
-
-      - name: Import GPG key
-        id: import_gpg
-        uses: crazy-max/ghaction-import-gpg@v4
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-
-      - name: build jsdk
-        run: |
-          make build
-
-      - name: mvn deploy
-        working-directory: java
-        run: |
-          # by convention only native submodule has variant release
-          # so it is a bit tricky to compile and deploy that
-          # firstly run `maven install` install things locally
-          # then selectly `mvn deploy` for hybridse-native & openmldb-native
-          ./mvnw --batch-mode clean install -DskipTests=true -Dscalatest.skip=true
-          ./mvnw --batch-mode -pl hybridse-native,openmldb-native deploy
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
-      - name: download shared libraries
-        uses: actions/download-artifact@v2
-        with:
-          name: shared-library-${{ github.sha }}
-          path: java
-
-      - name: prepare deploy allinone
-        run: |
-          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          VERSION=${VERSION#v}
-          VARIANT_TYPE=allinone ./java/prepare_release.sh "$VERSION"
-
-      - name: mvn deploy allinone
-        working-directory: java
-        run: |
-          # by convention only native submodule has variant release
-          # so it is a bit tricky to compile and deploy that
-          # firstly run `maven install` install things locally
-          # then selectly `mvn deploy` for hybridse-native & openmldb-native
-          ./mvnw --batch-mode clean install -DskipTests=true -Dscalatest.skip=true
-          ./mvnw --batch-mode -pl hybridse-native,openmldb-native deploy
-        env:
-          MAVEN_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-          MAVEN_TOKEN: ${{ secrets.OSSRH_TOKEN }}
-          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
-
   python-sdk:
     runs-on: ubuntu-latest
     container:
@@ -262,37 +135,6 @@ jobs:
           pip install setuptools wheel twine
           yum install -y net-tools
 
-      - name: test sqlalchemy and generate coverage report
-        run: |
-          bash steps/test_python.sh
-
-      - name: upload python ut results
-        if: always()
-        uses: actions/upload-artifact@v2
-        with:
-          name: linux-ut-result-python-${{ github.sha }}
-          path: |
-            python/openmldb_sdk/openmldb/tests/pytest.xml
-
-      - name: upload python coverage to codecov
-        uses: codecov/codecov-action@v3
-        with:
-          name: coverage-python
-          files: python/openmldb_sdk/tests/coverage.xml
-          fail_ci_if_error: true
-          verbose: true
-
-      - name: upload to pypi
-        if: >
-          github.repository == '4paradigm/OpenMLDB' && startsWith(github.ref, 'refs/tags/v')
-        run: |
-          cp python/openmldb_sdk/dist/openmldb*.whl .
-          cp python/openmldb_tool/dist/openmldb*.whl .
-          twine upload openmldb*.whl
-        env:
-          TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-
   python-sdk-mac:
     runs-on: macos-12
     if: github.event_name == 'push'
@@ -306,6 +148,7 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/v') }}
         run: |
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          VERSION="v0.6.5"
           VERSION=${VERSION#v}
           bash steps/prepare_release.sh "$VERSION"
 
@@ -335,6 +178,7 @@ jobs:
         if: >
           github.repository == '4paradigm/OpenMLDB' && startsWith(github.ref, 'refs/tags/v')
         run: |
+          PATH=$PATH:/Library/Frameworks/Python.framework/Versions/3.11/bin
           cp python/openmldb_sdk/dist/openmldb*.whl .
           cp python/openmldb_tool/dist/openmldb*.whl .
           twine upload openmldb-*.whl
