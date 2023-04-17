@@ -178,6 +178,8 @@ class Table {
 
     virtual int GetCount(uint32_t index, const std::string& pk, uint64_t& count) = 0; // NOLINT
 
+    virtual std::shared_ptr<std::string> GetStatistics() = 0;
+
  protected:
     void UpdateTTL();
     bool InitFromMeta();

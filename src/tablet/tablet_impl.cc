@@ -2296,6 +2296,21 @@ void TabletImpl::GetTableSchema(RpcController* controller, const ::openmldb::api
     response->mutable_table_meta()->CopyFrom(*table->GetTableMeta());
 }
 
+void TabletImpl::GetTableStatistics(RpcController* controller, const ::openmldb::api::GetTableStatisticsRequest* request,
+                                ::openmldb::api::GetTableStatisticsResponse* response, Closure* done) {
+    brpc::ClosureGuard done_guard(done);
+    std::shared_ptr<Table> table = GetTable(request->tid(), request->pid());
+    if (!table) {
+        response->set_code(::openmldb::base::ReturnCode::kTableIsNotExist);
+        response->set_msg("table does not exist");
+        PDLOG(WARNING, "table does not exist. tid %u, pid %u", request->tid(), request->pid());
+        return;
+    }
+    response->set_code(::openmldb::base::ReturnCode::kOk);
+    response->set_msg("ok");
+    response->set_statistics(*table->GetStatistics());
+}
+
 void TabletImpl::UpdateTableMetaForAddField(RpcController* controller,
                                             const ::openmldb::api::UpdateTableMetaForAddFieldRequest* request,
                                             ::openmldb::api::GeneralResponse* response, Closure* done) {

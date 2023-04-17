@@ -459,6 +459,10 @@ int MemTable::GetCount(uint32_t index, const std::string& pk, uint64_t& count) {
     return segment->GetCount(spk, count);
 }
 
+std::shared_ptr<std::string> MemTable::GetStatistics() {
+    return std::make_shared<std::string>("This is a MemTable!\n");
+}
+
 TableIterator* MemTable::NewIterator(const std::string& pk, Ticket& ticket) { return NewIterator(0, pk, ticket); }
 
 TableIterator* MemTable::NewIterator(uint32_t index, const std::string& pk, Ticket& ticket) {

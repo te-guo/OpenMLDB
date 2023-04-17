@@ -365,6 +365,17 @@ message GetTableSchemaResponse {
     optional TableMeta table_meta = 3;
 }
 
+message GetTableStatisticsRequest {
+    optional int32 tid = 1;
+    optional int32 pid = 2;
+}
+
+message GetTableStatisticsResponse {
+    optional int32 code = 1;
+    optional string msg = 2;
+    optional string statistics = 3;
+}
+
 message UpdateTTLRequest {
     optional int32 tid = 1;
     optional int32 pid = 2;
@@ -903,6 +914,7 @@ service TabletServer {
     rpc DropTable(DropTableRequest) returns (DropTableResponse);
     rpc GetTableStatus(GetTableStatusRequest) returns (GetTableStatusResponse);
     rpc GetTableSchema(GetTableSchemaRequest) returns (GetTableSchemaResponse);
+    rpc GetTableStatistics(GetTableStatisticsRequest) returns (GetTableStatisticsResponse);
     rpc GetTableFollower(GetTableFollowerRequest) returns (GetTableFollowerResponse);
     rpc UpdateTTL(UpdateTTLRequest) returns (UpdateTTLResponse);
     rpc ExecuteGc(ExecuteGcRequest) returns (GeneralResponse);

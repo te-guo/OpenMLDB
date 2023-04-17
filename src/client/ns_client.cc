@@ -146,6 +146,28 @@ bool NsClient::ShowTable(const std::string& name, const std::string& db, bool sh
     return false;
 }
 
+bool NsClient::GetTableStatistics(const std::string& name, const std::string& db,
+                         std::vector<::openmldb::nameserver::PartitionStatistics>& stat, std::string& msg) {
+    ::openmldb::nameserver::GetTableStatisticsRequest request;
+    if (!name.empty()) {
+        request.set_name(name);
+    }
+    request.set_db(db);
+    ::openmldb::nameserver::GetTableStatisticsResponse response;
+    bool ok = client_.SendRequest(&::openmldb::nameserver::NameServer_Stub::GetTableStatistics, &request, &response,
+                                  FLAGS_request_timeout_ms, 1);
+    msg = response.msg();
+    if (ok && response.code() == 0) {
+        for (int32_t i = 0; i < response.statistics_size(); i++) {
+            ::openmldb::nameserver::PartitionStatistics p_stat;
+            p_stat.CopyFrom(response.statistics(i));
+            stat.push_back(p_stat);
+        }
+        return true;
+    }
+    return false;
+}
+
 bool NsClient::ShowTable(const std::string& name, std::vector<::openmldb::nameserver::TableInfo>& tables,
                          std::string& msg) {
     return ShowTable(name, GetDb(), false, tables, msg);

@@ -205,6 +205,8 @@ bool execute_parameterized(const OpenmldbHandler& handler, const std::string& db
 // only one parameter,  a object of type RequestRow
 bool execute_request(const RequestRow& req);
 
+std::string get_table_statistics(const OpenmldbHandler& handler, const std::string& db, const std::string& table_name);
+
 // get the results of the latest SQL query
 std::shared_ptr<hybridse::sdk::ResultSet> get_resultset();
 

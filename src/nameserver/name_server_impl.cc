@@ -2961,6 +2961,79 @@ void NameServerImpl::ShowTable(RpcController* controller, const ShowTableRequest
     response->set_msg("ok");
 }
 
+void NameServerImpl::GetTableStatistics(RpcController* controller, const GetTableStatisticsRequest* request, GetTableStatisticsResponse* response,
+                              Closure* done) {
+    brpc::ClosureGuard done_guard(done);
+    if (!running_.load(std::memory_order_acquire)) {
+        response->set_code(::openmldb::base::ReturnCode::kNameserverIsNotLeader);
+        response->set_msg("nameserver is not leader");
+        PDLOG(WARNING, "cur nameserver is not leader");
+        return;
+    }
+    std::shared_ptr<::openmldb::nameserver::TableInfo> table_info;
+    std::map<std::string, std::shared_ptr<::openmldb::client::TabletClient>> tablet_client_map;
+    if (!GetTableInfo(request->table_name(), request->db_name(), &table_info)) {
+        response->set_code(::openmldb::base::ReturnCode::kTableIsNotExist);
+        response->set_msg("table does not exist!");
+        PDLOG(WARNING, "table[%s] does not exist!", request->table_name().c_str());
+        return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(mu_);
+        for (const auto& kv : tablets_) {
+            if (kv.second->state_ != ::openmldb::type::EndpointState::kHealthy) {
+                response->set_code(::openmldb::base::ReturnCode::kTabletIsNotHealthy);
+                response->set_msg("tablet is offline!");
+                PDLOG(WARNING, "tablet[%s] is offline!", kv.second->client_->GetEndpoint().c_str());
+                return;
+            }
+            tablet_client_map.insert(std::make_pair(kv.second->client_->GetEndpoint(), kv.second->client_));
+        }
+    }
+    for (int idx = 0; idx < table_info->table_partition_size(); idx++) {
+        for (int meta_idx = 0; meta_idx < table_info->table_partition(idx).partition_meta_size(); meta_idx++) {
+            std::string endpoint = table_info->table_partition(idx).partition_meta(meta_idx).endpoint();
+            if (!table_info->table_partition(idx).partition_meta(meta_idx).is_alive()) {
+                response->set_code(::openmldb::base::ReturnCode::kTableHasNoAliveLeaderPartition);
+                response->set_msg("partition is not alive!");
+                PDLOG(WARNING, "partition[%s][%d] is not alive!", endpoint.c_str(),
+                      table_info->table_partition(idx).pid());
+                return;
+            }
+            if (tablet_client_map.find(endpoint) == tablet_client_map.end()) {
+                response->set_code(::openmldb::base::ReturnCode::kTabletIsNotHealthy);
+                response->set_msg("tablet is not healthy");
+                PDLOG(WARNING, "endpoint %s is not healthy", endpoint.c_str());
+                return;
+            }
+        }
+    }
+    bool failed = false;
+    for (int idx = 0; idx < table_info->table_partition_size(); idx++) {
+        for (int meta_idx = 0; meta_idx < table_info->table_partition(idx).partition_meta_size(); meta_idx++) {
+            std::string endpoint = table_info->table_partition(idx).partition_meta(meta_idx).endpoint();
+            std::string p_stat;
+            if (!tablet_client_map[endpoint]->GetTableStatistics(table_info->tid(), table_info->table_partition(idx).pid(),
+                                                          p_stat)) {
+                PDLOG(WARNING, "get statistics failed. name %s pid %u endpoint %s", request->table_name().c_str(),
+                      table_info->table_partition(idx).pid(), endpoint.c_str());
+                failed = true;
+            }
+            ::openmldb::nameserver::PartitionStatistics* stat = response->add_statistics();
+            stat->set_p_stat(p_stat);
+            stat->set_pid(table_info->table_partition(idx).pid());
+            stat->set_endpoint(endpoint.c_str());
+        }
+    }
+    if (failed) {
+        response->set_code(::openmldb::base::kGetStatisticsFailed);
+        response->set_msg("get statistics failed");
+    } else {
+        response->set_code(0);
+        response->set_msg("ok");
+    }
+}
+
 void NameServerImpl::DropTableFun(const DropTableRequest* request, GeneralResponse* response,
                                   std::shared_ptr<::openmldb::nameserver::TableInfo> table_info) {
     std::shared_ptr<::openmldb::api::TaskInfo> task_ptr;

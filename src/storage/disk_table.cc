@@ -201,6 +201,7 @@ bool DiskTable::Init() {
         PDLOG(WARNING, "fail to create path %s", path.c_str());
         return false;
     }
+    options_.statistics = rocksdb::CreateDBStatistics();
     options_.create_if_missing = true;
     options_.error_if_exists = false;
     options_.create_missing_column_families = true;
@@ -1160,6 +1161,12 @@ int DiskTable::GetCount(uint32_t index, const std::string& pk, uint64_t& count) 
     }
 
     return 0;
+}
+
+std::shared_ptr<std::string> DiskTable::GetStatistics() {
+    if(db_ == nullptr)
+        return std::make_shared<std::string>("There is no db for this table!\n");
+    return std::make_shared<std::string>(db_->GetOptions().statistics->ToString());
 }
 
 }  // namespace storage

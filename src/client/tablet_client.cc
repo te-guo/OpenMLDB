@@ -625,6 +625,20 @@ bool TabletClient::GetTableSchema(uint32_t tid, uint32_t pid, ::openmldb::api::T
     return false;
 }
 
+bool TabletClient::GetTableStatistics(uint32_t tid, uint32_t pid, std::string& statistics) {
+    ::openmldb::api::GetTableStatisticsRequest request;
+    request.set_tid(tid);
+    request.set_pid(pid);
+    ::openmldb::api::GetTableStatisticsResponse response;
+    bool ok = client_.SendRequest(&::openmldb::api::TabletServer_Stub::GetTableStatistics, &request, &response,
+                                  FLAGS_request_timeout_ms, 1);
+    if (ok && response.code() == 0) {
+        statistics = response.statistics();
+        return true;
+    }
+    return false;
+}
+
 bool TabletClient::DropTable(uint32_t id, uint32_t pid, std::shared_ptr<TaskInfo> task_info) {
     ::openmldb::api::DropTableRequest request;
     request.set_tid(id);

@@ -991,6 +991,40 @@ bool SQLClusterRouter::DropTable(const std::string& db, const std::string& table
     return true;
 }
 
+std::string SQLClusterRouter::GetTableStatistics(const std::string& db, const std::string& table, hybridse::sdk::Status* status) {
+    RET_IF_NULL_AND_WARN(status, "output status is nullptr");
+    // functions we called later may not change the status if it's succeed. So if we pass error status here, we'll get a
+    // fake error
+    status->SetOK();
+    auto ns_ptr = cluster_sdk_->GetNsClient();
+    if (!ns_ptr) {
+        SET_STATUS_AND_WARN(status, StatusCode::kRuntimeError, "no ns client, retry or check ns process");
+        return {};
+    }
+    std::string db_name = create_index_node->db_name_.empty() ? db : create_index_node->db_name_;
+    if (db_name.empty()) {
+        *status = {::hybridse::common::StatusCode::kCmdError, "Please use database first"};
+        return {};
+    }
+    std::vector<::openmldb::nameserver::PartitionStatistics> stat;
+    std::string msg;
+    if (ns_ptr->GetTableStatistics(table, db_name, stat, msg)) {
+        *status = {};
+    } else {
+        SET_STATUS_AND_WARN(status, StatusCode::kCmdError, "ns get table statistics failed");
+        return {};
+    }
+    std::string stat_str;
+    for(auto p_stat: stat){
+        stat_str += std::string()
+            + "pid = " + p_stat->pid()
+            + ", endpoint = " + p_stat->endpoint()
+            + "\n" + p_stat->p_stat()
+            + "\n\n";
+    }
+    return stat_str;
+}
+
 /**
  * Get SQL cache
  * @param db

@@ -84,6 +84,10 @@ class NsClient : public Client {
                    std::vector<::openmldb::nameserver::TableInfo>& tables,  // NOLINT
                    std::string& msg);                                       // NOLINT
 
+    bool GetTableStatistics(const std::string& name, const std::string& db,
+                   std::vector<::openmldb::nameserver::PartitionStatistics>& stat,  // NOLINT
+                   std::string& msg);                                       // NOLINT
+
     bool ShowCatalogVersion(std::map<std::string, uint64_t>* version_map, std::string* msg);
 
     bool ShowAllTable(std::vector<::openmldb::nameserver::TableInfo>& tables,  // NOLINT

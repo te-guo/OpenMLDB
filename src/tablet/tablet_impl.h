@@ -152,6 +152,9 @@ class TabletImpl : public ::openmldb::api::TabletServer {
     void GetTableSchema(RpcController* controller, const ::openmldb::api::GetTableSchemaRequest* request,
                         ::openmldb::api::GetTableSchemaResponse* response, Closure* done);
 
+    void GetTableStatistics(RpcController* controller, const ::openmldb::api::GetTableStatisticsRequest* request,
+                        ::openmldb::api::GetTableStatisticsResponse* response, Closure* done);
+
     void DeleteOPTask(RpcController* controller, const ::openmldb::api::DeleteTaskRequest* request,
                       ::openmldb::api::GeneralResponse* response, Closure* done);
 

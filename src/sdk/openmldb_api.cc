@@ -334,6 +334,10 @@ bool execute_request(const RequestRow& req) {
     return ((req.get_handler())->get_status())->IsOK();
 }
 
+std::string get_table_statistics(const OpenmldbHandler& handler, const std::string& db, const std::string& table_name){
+    return (handler.get_router())->GetTableStatistics(db, table_name, handler.get_status());
+}
+
 std::shared_ptr<hybridse::sdk::ResultSet> get_resultset() { return resultset_last; }
 
 void print_resultset(std::shared_ptr<hybridse::sdk::ResultSet> rs = resultset_last) {
