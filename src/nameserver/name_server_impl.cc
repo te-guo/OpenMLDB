@@ -2972,10 +2972,10 @@ void NameServerImpl::GetTableStatistics(RpcController* controller, const GetTabl
     }
     std::shared_ptr<::openmldb::nameserver::TableInfo> table_info;
     std::map<std::string, std::shared_ptr<::openmldb::client::TabletClient>> tablet_client_map;
-    if (!GetTableInfo(request->table_name(), request->db_name(), &table_info)) {
+    if (!GetTableInfo(request->name(), request->db(), &table_info)) {
         response->set_code(::openmldb::base::ReturnCode::kTableIsNotExist);
         response->set_msg("table does not exist!");
-        PDLOG(WARNING, "table[%s] does not exist!", request->table_name().c_str());
+        PDLOG(WARNING, "table[%s] does not exist!", request->name().c_str());
         return;
     }
     {
@@ -3015,7 +3015,7 @@ void NameServerImpl::GetTableStatistics(RpcController* controller, const GetTabl
             std::string p_stat;
             if (!tablet_client_map[endpoint]->GetTableStatistics(table_info->tid(), table_info->table_partition(idx).pid(),
                                                           p_stat)) {
-                PDLOG(WARNING, "get statistics failed. name %s pid %u endpoint %s", request->table_name().c_str(),
+                PDLOG(WARNING, "get statistics failed. name %s pid %u endpoint %s", request->name().c_str(),
                       table_info->table_partition(idx).pid(), endpoint.c_str());
                 failed = true;
             }

@@ -1001,14 +1001,13 @@ std::string SQLClusterRouter::GetTableStatistics(const std::string& db, const st
         SET_STATUS_AND_WARN(status, StatusCode::kRuntimeError, "no ns client, retry or check ns process");
         return {};
     }
-    std::string db_name = create_index_node->db_name_.empty() ? db : create_index_node->db_name_;
-    if (db_name.empty()) {
+    if (db.empty()) {
         *status = {::hybridse::common::StatusCode::kCmdError, "Please use database first"};
         return {};
     }
     std::vector<::openmldb::nameserver::PartitionStatistics> stat;
     std::string msg;
-    if (ns_ptr->GetTableStatistics(table, db_name, stat, msg)) {
+    if (ns_ptr->GetTableStatistics(table, db, stat, msg)) {
         *status = {};
     } else {
         SET_STATUS_AND_WARN(status, StatusCode::kCmdError, "ns get table statistics failed");
@@ -1017,9 +1016,9 @@ std::string SQLClusterRouter::GetTableStatistics(const std::string& db, const st
     std::string stat_str;
     for(auto p_stat: stat){
         stat_str += std::string()
-            + "pid = " + p_stat->pid()
-            + ", endpoint = " + p_stat->endpoint()
-            + "\n" + p_stat->p_stat()
+            + "pid = " + std::to_string(p_stat.pid())
+            + ", endpoint = " + p_stat.endpoint()
+            + "\n" + p_stat.p_stat()
             + "\n\n";
     }
     return stat_str;
