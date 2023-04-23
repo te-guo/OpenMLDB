@@ -100,6 +100,10 @@ case $OP in
                 ./bin/openmldb --flagfile=./conf/"${COMPONENT}".flags --enable_status_service=true >> "$LOG_DIR"/"$COMPONENT".log 2>&1 &
                 PID=$!
                 echo "process pid is $PID"
+                if [ "$COMPONENT"  == "tablet" ]; then
+                    perf record -g -p "$PID" &
+                    echo "perf record -g -p $PID ..."
+                fi
             fi
             if [ -x "$(command -v curl)" ]; then
                 sleep 3
