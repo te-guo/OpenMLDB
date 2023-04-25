@@ -34,6 +34,7 @@ DECLARE_bool(verify_compression);
 DECLARE_int32(disk_gc_interval);
 DECLARE_uint32(max_log_file_size);
 DECLARE_uint32(keep_log_file_num);
+DECLARE_uint32(stats_dump_period_sec);
 
 namespace openmldb {
 namespace storage {
@@ -202,6 +203,7 @@ bool DiskTable::Init() {
         return false;
     }
     options_.statistics = rocksdb::CreateDBStatistics();
+    options_.stats_dump_period_sec = FLAGS_stats_dump_period_sec;
     options_.create_if_missing = true;
     options_.error_if_exists = false;
     options_.create_missing_column_families = true;

@@ -101,8 +101,9 @@ case $OP in
                 PID=$!
                 echo "process pid is $PID"
                 if [ "$COMPONENT"  == "tablet" ]; then
-                    perf record -g -p "$PID" &
-                    echo "perf record -g -p $PID ..."
+                    # perf record -g -p "$PID" &
+                    perf stat -d -p "$PID" 2> perf_stat_result.txt &
+                    echo "perf stat -d -p $PID ..."
                 fi
             fi
             if [ -x "$(command -v curl)" ]; then

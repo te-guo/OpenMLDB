@@ -91,6 +91,14 @@ public class SqlClusterExecutor implements SqlExecutor {
         }
     }
 
+    // @Override
+    // public String getTableStatistics(String db, String table) {
+    //     Status status = new Status();
+    //     String stat = sqlRouter.GetTableStatistics(db, table, status);
+    //     status.delete();
+    //     return stat;
+    // }
+
     @Override
     public boolean executeDDL(String db, String sql) {
         Status status = new Status();

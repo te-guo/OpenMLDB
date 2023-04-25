@@ -33,6 +33,8 @@ public interface SqlExecutor {
     @Deprecated
     boolean dropDB(String db);
 
+    // String getTableStatistics(String db, String table);
+
     @Deprecated
     boolean executeDDL(String db, String sql);
 
