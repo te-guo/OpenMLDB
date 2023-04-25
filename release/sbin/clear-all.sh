@@ -34,7 +34,7 @@ else
     dir=$(echo "$line" | awk -F ' ' '{print $3}')
 
     echo "clear tablet data and log in $dir with endpoint $host:$port "
-    cmd="cd $dir && rm -rf recycle db logs"
+    cmd="cd $dir && rm -rf recycle* db* logs"
     run_auto "$host" "$cmd"
   done
 
