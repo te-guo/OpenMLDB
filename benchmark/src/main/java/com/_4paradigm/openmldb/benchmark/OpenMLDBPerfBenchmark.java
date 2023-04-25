@@ -95,13 +95,16 @@ public class OpenMLDBPerfBenchmark {
     }
 
     public void putData() {
+        System.out.println("PutData mt...");
         Util.putData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get("mt"), windowSize, executor);
         for (int i = 0; i < unionNum; i++) {
             String tableName = "ut" + String.valueOf(i);
+            System.out.printf("PutData %s...\n", tableName);
             Util.putData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get(tableName), windowSize, executor);
         }
         for (int i = 0; i < joinNum; i++) {
             String tableName = "lt" + String.valueOf(i);
+            System.out.printf("PutData %s...\n", tableName);
             Util.putData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get(tableName), windowSize, executor);
         }
     }
@@ -160,6 +163,7 @@ public class OpenMLDBPerfBenchmark {
             e.printStackTrace();
         }
         addSchema();
+        System.out.println("Start PutData...");
         putData();
         if (!pkList.isEmpty()) {
             importData();

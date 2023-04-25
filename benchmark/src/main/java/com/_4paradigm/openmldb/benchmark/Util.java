@@ -64,7 +64,7 @@ public class Util {
             builder.append("index(key = ").append("col_s").append(i).append( ", ttl=0m, ttl_type=absolute, ts = col_t0),");
         }
         builder.delete(builder.length() - 1, builder.length() - 1);
-        builder.append(") OPTIONS (REPLICANUM = 1);");
+        builder.append(") OPTIONS(partitionnum=2, replicanum=1, storage_mode='SSD');");
         return builder.toString();
     }
 
@@ -178,6 +178,9 @@ public class Util {
             pkNum = pkList.size();
         }
         for (int i = 0; i < pkNum; i++) {
+            if(i*20/pkNum != (i+1)*20/pkNum){
+                System.out.printf("> %d/%d...\n", i, pkNum);
+            }
             int curKey = BenchmarkConfig.PK_BASE;
             if (pkList.isEmpty()) {
                 curKey += i;
