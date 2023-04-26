@@ -99,4 +99,4 @@
 
 # rocksdb
 --write_buffer_mb=32
---stats_dump_period_sec=2
+--stats_dump_period_sec=20
