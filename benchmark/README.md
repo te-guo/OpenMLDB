@@ -19,6 +19,8 @@ OpenMLDB Benchmak tool is used for tesing the performance of OpenMLDB's online S
     mkdir -p /work/benchmark/conf /work/benchmark/lib
     cp target/openmldb-benchmark-0.5.0.jar  /work/benchmark/lib
     cp src/main/resources/conf.properties /work/benchmark/conf
+    cp test.sh /work/benchmark/
+    cp call_perf.sh /work/benchmark/
     ```
 3. Modify the configuration
     ```

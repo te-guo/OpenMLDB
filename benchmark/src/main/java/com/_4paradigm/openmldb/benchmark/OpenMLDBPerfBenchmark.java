@@ -168,6 +168,13 @@ public class OpenMLDBPerfBenchmark {
         if (!pkList.isEmpty()) {
             importData();
         }
+        try {
+            Process p = Runtime.getRuntime().exec("touch ready_to_perf");
+            int returnCode = p.waitFor();
+            System.out.println("Ready to perf...");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @TearDown
