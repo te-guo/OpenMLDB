@@ -163,6 +163,7 @@ bool DiskTable::InitColumnFamilyDescriptor() {
     }
     options_.max_log_file_size = FLAGS_max_log_file_size;
     options_.keep_log_file_num = FLAGS_keep_log_file_num;
+    options_.stats_dump_period_sec = FLAGS_stats_dump_period_sec;
     auto inner_indexs = table_index_.GetAllInnerIndex();
     for (const auto& inner_index : *inner_indexs) {
         rocksdb::Options cur_options = options_;
@@ -203,7 +204,6 @@ bool DiskTable::Init() {
         return false;
     }
     options_.statistics = rocksdb::CreateDBStatistics();
-    options_.stats_dump_period_sec = FLAGS_stats_dump_period_sec;
     options_.create_if_missing = true;
     options_.error_if_exists = false;
     options_.create_missing_column_families = true;

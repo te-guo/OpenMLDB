@@ -171,6 +171,7 @@ DEFINE_uint32(block_cache_mb, 4096,
               "Memory allocated for caching uncompressed block (OS page cache "
               "handles the compressed ones)");
 DEFINE_uint32(write_buffer_mb, 128, "Memtable size");
+DEFINE_uint32(stats_dump_period_sec, 60, "Period of RocksDB dumping statistic logs");
 DEFINE_uint32(block_cache_shardbits, 8, "Divide block cache into 2^8 shards to avoid cache contention");
 DEFINE_bool(verify_compression, false, "For debug");
 DEFINE_uint32(max_log_file_size, 100 * 1024 * 1024, "Specify the maximal size of the rocksdb info log file");
