@@ -81,15 +81,18 @@ public class OpenMLDBPerfBenchmark {
         Util.executeSQL("CREATE DATABASE IF NOT EXISTS " + database + ";", executor);
         Util.executeSQL("USE " + database + ";", executor);
         String ddl = Util.genDDL("mt", windowNum);
+        System.out.printf("%s\n", ddl);
         Util.executeSQL(ddl, executor);
         for (int i = 0; i < unionNum; i++) {
             String tableName = "ut" + String.valueOf(i);
             ddl = Util.genDDL(tableName, windowNum);
+            System.out.printf("%s\n", ddl);
             Util.executeSQL(ddl, executor);
         }
         for (int i = 0; i < joinNum; i++) {
             String tableName = "lt" + String.valueOf(i);
             ddl = Util.genDDL(tableName, 1);
+            System.out.printf("%s\n", ddl);
             Util.executeSQL(ddl, executor);
         }
     }

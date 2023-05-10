@@ -34,6 +34,7 @@ public class BenchmarkConfig {
     public static long TS_BASE = 1652232079000l;
     public static String DEPLOY_NAME;
     public static String CSV_PATH;
+    public static String STORAGE_MODE;
 
     private static SqlExecutor executor = null;
     private static SdkOption option = null;
@@ -56,6 +57,7 @@ public class BenchmarkConfig {
             PK_NUM = Integer.valueOf(prop.getProperty("PK_NUM", "100000"));
             PK_MAX = Integer.valueOf(prop.getProperty("PK_MAX", "0"));
             CSV_PATH = prop.getProperty("CSV_PATH");
+            STORAGE_MODE = prop.getProperty("STORAGE_MODE");
 //            if(!CSV_PATH.startsWith("/")){
 //                CSV_PATH=Util.getRootPath()+CSV_PATH;
 //            }

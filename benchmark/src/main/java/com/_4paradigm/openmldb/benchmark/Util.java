@@ -64,7 +64,7 @@ public class Util {
             builder.append("index(key = ").append("col_s").append(i).append( ", ttl=0m, ttl_type=absolute, ts = col_t0),");
         }
         builder.delete(builder.length() - 1, builder.length() - 1);
-        builder.append(") OPTIONS(partitionnum=2, replicanum=1, storage_mode='SSD');");
+        builder.append(") OPTIONS(partitionnum=2, replicanum=1, storage_mode='").append(BenchmarkConfig.STORAGE_MODE).append("');");
         return builder.toString();
     }
 
@@ -102,6 +102,7 @@ public class Util {
             }
             builder.append(" partition by ").append("col_s").append(i)
                     .append(" order by col_t0 rows_range between 30d PRECEDING AND CURRENT ROW MAXSIZE ").append(windowSize).append("),\n");
+                    // .append(" order by col_t0 rows between ").append(windowSize).append(" PRECEDING AND CURRENT ROW),\n");
         }
         builder.delete(builder.length() - 2, builder.length() - 1);
         if (joinNum > 0) {
