@@ -167,7 +167,7 @@ public class Util {
             } else if (type.equals(Type.DataType.kBool)) {
                 builder.append(true);
             } else if (type.equals(Type.DataType.kDate)) {
-                builder.append("'2022-05-11'");
+                builder.append("'2023-05-11'");
             } else {
                 System.out.println("invalid type");
             }
@@ -227,6 +227,96 @@ public class Util {
                             e.printStackTrace();
                         }
                     }
+                }
+            }
+        }
+        return true;
+    }
+
+    public static boolean putOneData(List<Integer> pkList, int pkNum, TableSchema tableSchema, int windowSize, SqlExecutor executor) {
+        String dbName = tableSchema.getDataBase();
+        String tableName = tableSchema.getTableName();
+        List<Type.DataType> schema = tableSchema.getSchema();
+        Set<Integer> index = tableSchema.getIndex();
+        Set<Integer> tsIndex = tableSchema.getTsIndex();
+
+        StringBuilder builder = new StringBuilder();
+        builder.append("insert into ").append(tableName).append(" values(");
+        List<Integer> genColIndex = new ArrayList<>();
+        for (int pos = 0; pos < schema.size(); pos++) {
+            if (pos > 0) {
+                builder.append(", ");
+            }
+            if (index.contains(pos) || tsIndex.contains(pos)) {
+                builder.append("?");
+                genColIndex.add(pos);
+                continue;
+            }
+            Type.DataType type = schema.get(pos);
+            if (type.equals(Type.DataType.kString) || type.equals(Type.DataType.kVarchar)) {
+                builder.append("'val").append(BenchmarkConfig.PK_BASE).append("'");
+            } else if (type.equals(Type.DataType.kFloat)) {
+                builder.append(1.3);
+            } else if (type.equals(Type.DataType.kDouble)) {
+                builder.append(1.4d);
+            } else if (type.equals(Type.DataType.kBigInt) || type.equals(Type.DataType.kInt) ||
+                    type.equals(Type.DataType.kSmallInt)) {
+                builder.append(pos);
+            } else if (type.equals(Type.DataType.kTimestamp)) {
+                builder.append(BenchmarkConfig.TS_BASE);
+            } else if (type.equals(Type.DataType.kBool)) {
+                builder.append(true);
+            } else if (type.equals(Type.DataType.kDate)) {
+                builder.append("'2023-05-11'");
+            } else {
+                System.out.println("invalid type");
+            }
+
+        }
+        builder.append(");");
+        String insertSQL = builder.toString();
+        if (!pkList.isEmpty()) {
+            pkNum = pkList.size();
+        }
+        Random r = new Random(System.currentTimeMillis());
+        int i = r.nextInt(pkNum);
+        int curKey = BenchmarkConfig.PK_BASE;
+        if (pkList.isEmpty()) {
+            curKey += i;
+        } else {
+            curKey += pkList.get(i);
+        }
+        PreparedStatement state = null;
+        try {
+            state = executor.getInsertPreparedStmt(dbName, insertSQL);
+            for (int idx = 0; idx < genColIndex.size(); idx++) {
+                int pos = genColIndex.get(idx);
+                Type.DataType type = schema.get(pos);
+                if (type.equals(Type.DataType.kString) || type.equals(Type.DataType.kVarchar)) {
+                    state.setString(idx + 1, "k" + String.valueOf(10 + idx) + String.valueOf(curKey));
+                } else if (type.equals(Type.DataType.kBigInt)) {
+                    if (tsIndex.contains(pos)) {
+                        state.setLong(idx + 1, System.currentTimeMillis());
+                    } else {
+                        state.setLong(idx + 1, curKey);
+                    }
+                } else if (type.equals(Type.DataType.kTimestamp)) {
+                    state.setTimestamp(idx + 1, new Timestamp(System.currentTimeMillis()));
+                } else if (type.equals(Type.DataType.kInt)) {
+                    state.setInt(idx + 1, curKey);
+                } else {
+                    System.out.println("invalid type");
+                }
+            }
+            state.execute();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (state != null) {
+                try {
+                    state.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }

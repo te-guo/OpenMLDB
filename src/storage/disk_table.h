@@ -36,6 +36,8 @@
 #include "rocksdb/status.h"
 #include "rocksdb/table.h"
 #include "rocksdb/utilities/checkpoint.h"
+#include "rocksdb/iostats_context.h"
+#include "rocksdb/perf_context.h"
 #include "storage/iterator.h"
 #include "storage/table.h"
 
@@ -435,6 +437,9 @@ class DiskTable : public Table {
     int GetCount(uint32_t index, const std::string& pk, uint64_t& count) override; // NOLINT
 
     std::shared_ptr<std::string> GetStatistics() override;
+    static void InitRocksDBProfile(bool manual);
+    static void DumpRocksDBProfile();
+    static std::string GetRocksDBProfile();
 
  private:
     rocksdb::DB* db_;

@@ -61,6 +61,7 @@ public class BenchmarkConfig {
 //            if(!CSV_PATH.startsWith("/")){
 //                CSV_PATH=Util.getRootPath()+CSV_PATH;
 //            }
+            TS_BASE = System.currentTimeMillis();
         } catch (Exception e) {
             e.printStackTrace();
         }

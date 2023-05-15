@@ -313,6 +313,9 @@ bool TabletImpl::Init(const std::string& zk_cluster, const std::string& zk_path,
     MallocExtension* tcmalloc = MallocExtension::instance();
     tcmalloc->SetMemoryReleaseRate(FLAGS_mem_release_rate);
 #endif
+    ::openmldb::storage::DiskTable::InitRocksDBProfile(false);
+    dump_rocksDB_thread.ok = true;
+    dump_rocksDB_thread.last_dump = std::chrono::system_clock::now();
     return true;
 }
 
@@ -707,6 +710,7 @@ void TabletImpl::Get(RpcController* controller, const ::openmldb::api::GetReques
         default:
             return;
     }
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::Put(RpcController* controller, const ::openmldb::api::PutRequest* request,
@@ -829,6 +833,7 @@ void TabletImpl::Put(RpcController* controller, const ::openmldb::api::PutReques
         table->GetName() == openmldb::nameserver::GLOBAL_VARIABLES) {
         UpdateGlobalVarTable();
     }
+    DumpRocksDBProfile();
 }
 
 int TabletImpl::CheckTableMeta(const openmldb::api::TableMeta* table_meta, std::string& msg) {
@@ -1315,6 +1320,7 @@ void TabletImpl::Scan(RpcController* controller, const ::openmldb::api::ScanRequ
         default:
             return;
     }
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::Count(RpcController* controller, const ::openmldb::api::CountRequest* request,
@@ -1397,6 +1403,7 @@ void TabletImpl::Count(RpcController* controller, const ::openmldb::api::CountRe
         default:
             return;
     }
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::Traverse(RpcController* controller, const ::openmldb::api::TraverseRequest* request,
@@ -1552,6 +1559,7 @@ void TabletImpl::Traverse(RpcController* controller, const ::openmldb::api::Trav
     response->set_ts(last_time);
     response->set_is_finish(is_finish);
     response->set_ts_pos(ts_pos);
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::Delete(RpcController* controller, const ::openmldb::api::DeleteRequest* request,
@@ -1641,6 +1649,7 @@ void TabletImpl::Delete(RpcController* controller, const ::openmldb::api::Delete
         replicator->Notify();
     }
     return;
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::Query(RpcController* ctrl, const openmldb::api::QueryRequest* request,
@@ -1650,6 +1659,7 @@ void TabletImpl::Query(RpcController* ctrl, const openmldb::api::QueryRequest* r
     brpc::Controller* cntl = static_cast<brpc::Controller*>(ctrl);
     butil::IOBuf& buf = cntl->response_attachment();
     ProcessQuery(ctrl, request, response, &buf);
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::ProcessQuery(RpcController* ctrl, const openmldb::api::QueryRequest* request,
@@ -1780,6 +1790,7 @@ void TabletImpl::SubQuery(RpcController* ctrl, const openmldb::api::QueryRequest
     brpc::Controller* cntl = static_cast<brpc::Controller*>(ctrl);
     butil::IOBuf& buf = cntl->response_attachment();
     ProcessQuery(ctrl, request, response, &buf);
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::SQLBatchRequestQuery(RpcController* ctrl, const openmldb::api::SQLBatchRequestQueryRequest* request,
@@ -1961,6 +1972,7 @@ void TabletImpl::ProcessBatchRequestQuery(RpcController* ctrl,
     response->set_code(::openmldb::base::kOk);
     DLOG(INFO) << "handle batch request sql " << request->sql() << " with record cnt " << output_rows.size()
                << " with schema size " << session.GetSchema().size();
+    DumpRocksDBProfile();
 }
 void TabletImpl::SubBatchRequestQuery(RpcController* ctrl, const openmldb::api::SQLBatchRequestQueryRequest* request,
                                       openmldb::api::SQLBatchRequestQueryResponse* response, Closure* done) {
@@ -2309,6 +2321,7 @@ void TabletImpl::GetTableStatistics(RpcController* controller, const ::openmldb:
     response->set_code(::openmldb::base::ReturnCode::kOk);
     response->set_msg("ok");
     response->set_statistics(*table->GetStatistics());
+    DumpRocksDBProfile();
 }
 
 void TabletImpl::UpdateTableMetaForAddField(RpcController* controller,
@@ -5906,6 +5919,17 @@ void TabletImpl::GetAndFlushDeployStats(::google::protobuf::RpcController* contr
         new_row->set_total(r.GetTotalAsStr(statistics::TimeUnit::MICRO_SECOND));
     }
     response->set_code(ReturnCode::kOk);
+}
+
+void TabletImpl::DumpRocksDBProfile(){
+    if(!dump_rocksDB_thread.ok)
+        return;
+    auto now = std::chrono::system_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - dump_rocksDB_thread.last_dump).count();
+    if(duration >= 1000) {
+        ::openmldb::storage::DiskTable::DumpRocksDBProfile();
+        dump_rocksDB_thread.last_dump = now;
+    }
 }
 
 }  // namespace tablet

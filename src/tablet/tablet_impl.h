@@ -25,6 +25,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <chrono>
 
 #include "base/spinlock.h"
 #include "brpc/server.h"
@@ -455,7 +456,13 @@ class TabletImpl : public ::openmldb::api::TabletServer {
     // refresh the pre-aggr tables info
     bool RefreshAggrCatalog();
 
+    void DumpRocksDBProfile();
+
  private:
+    struct {
+        bool ok = false;
+        std::chrono::system_clock::time_point last_dump;
+    } dump_rocksDB_thread;
     Tables tables_;
     std::mutex mu_;
     SpinMutex spin_mutex_;

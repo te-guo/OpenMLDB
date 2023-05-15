@@ -26,12 +26,15 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import java.sql.*;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.io.FileReader;
+import java.io.IOException;
+
 
 
 @BenchmarkMode(Mode.SampleTime)
 @OutputTimeUnit(TimeUnit.MICROSECONDS)
 @State(Scope.Benchmark)
-@Threads(10)
+@Threads(1)
 @Fork(value = 1, jvmArgs = {"-Xms8G", "-Xmx8G"})
 @Warmup(iterations = 2)
 @Measurement(iterations = 5, time = 60)
@@ -178,12 +181,38 @@ public class OpenMLDBPerfBenchmark {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        System.out.println("########### RocksDBProfile #############");
+        printFile("/tmp/openmldb/tablet-1/rocksdb_profile.txt", "/tmp/openmldb/tablet-1/begin.txt");
+        printFile("/tmp/openmldb/tablet-2/rocksdb_profile.txt", "/tmp/openmldb/tablet-2/begin.txt");
+        System.out.println("######### End of RocksDBProfile ########");
     }
 
     @TearDown
     public void cleanEnv() {
+        System.out.println("########### RocksDBProfile #############");
+        printFile("/tmp/openmldb/tablet-1/rocksdb_profile.txt", "/tmp/openmldb/tablet-1/end.txt");
+        printFile("/tmp/openmldb/tablet-2/rocksdb_profile.txt", "/tmp/openmldb/tablet-2/end.txt");
+        System.out.println("######### End of RocksDBProfile ########");
         drop();
     }
+
+    public void printFile(String filename, String copyname) {
+        try {
+            Process p = Runtime.getRuntime().exec(String.format("cp %s %s", filename, copyname));
+            int returnCode = p.waitFor();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try (Scanner sc = new Scanner(new FileReader(copyname))) {
+            while (sc.hasNextLine()) {
+                String line = sc.nextLine();
+                System.out.println(line);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     @Benchmark
     public void executeDeployment() {
@@ -195,6 +224,7 @@ public class OpenMLDBPerfBenchmark {
             numberKey += pkList.get(pos);
         }
         try {
+            // Util.putOneData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get("mt"), windowSize, executor);
             PreparedStatement stat = Util.getPreparedStatement(deployName, numberKey, tableSchema.get("mt"), executor);
             ResultSet resultSet = stat.executeQuery();
             /*resultSet.next();
