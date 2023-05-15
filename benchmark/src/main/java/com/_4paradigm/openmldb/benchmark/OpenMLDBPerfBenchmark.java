@@ -224,7 +224,9 @@ public class OpenMLDBPerfBenchmark {
             numberKey += pkList.get(pos);
         }
         try {
-            // Util.putOneData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get("mt"), windowSize, executor);
+            if(BenchmarkConfig.INSERT_BEFORE_REQUEST) {
+                Util.putOneData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get("mt"), windowSize, executor);
+            }
             PreparedStatement stat = Util.getPreparedStatement(deployName, numberKey, tableSchema.get("mt"), executor);
             ResultSet resultSet = stat.executeQuery();
             /*resultSet.next();

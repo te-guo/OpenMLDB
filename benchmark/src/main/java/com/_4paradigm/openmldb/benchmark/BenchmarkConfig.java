@@ -35,6 +35,7 @@ public class BenchmarkConfig {
     public static String DEPLOY_NAME;
     public static String CSV_PATH;
     public static String STORAGE_MODE;
+    public static boolean INSERT_BEFORE_REQUEST = false;
 
     private static SqlExecutor executor = null;
     private static SdkOption option = null;
@@ -58,6 +59,7 @@ public class BenchmarkConfig {
             PK_MAX = Integer.valueOf(prop.getProperty("PK_MAX", "0"));
             CSV_PATH = prop.getProperty("CSV_PATH");
             STORAGE_MODE = prop.getProperty("STORAGE_MODE");
+            INSERT_BEFORE_REQUEST = Integer.valueOf(prop.getProperty("INSERT_BEFORE_REQUEST")) != 0;
 //            if(!CSV_PATH.startsWith("/")){
 //                CSV_PATH=Util.getRootPath()+CSV_PATH;
 //            }

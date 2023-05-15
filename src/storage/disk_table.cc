@@ -236,10 +236,10 @@ bool DiskTable::Put(const std::string& pk, uint64_t time, const char* data, uint
     rocksdb::Status s;
     std::string combine_key = CombineKeyTs(rocksdb::Slice(pk), time);
     rocksdb::Slice spk = rocksdb::Slice(combine_key);
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     s = db_->Put(write_opts_, cf_hs_[1], spk, rocksdb::Slice(data, size));
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     if (s.ok()) {
         offset_.fetch_add(1, std::memory_order_relaxed);
         return true;
@@ -294,10 +294,10 @@ bool DiskTable::Put(uint64_t time, const std::string& value, const Dimensions& d
             batch.Put(cf_hs_[inner_pos + 1], spk, value);
         }
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     auto s = db_->Write(write_opts_, &batch);
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     if (s.ok()) {
         offset_.fetch_add(1, std::memory_order_relaxed);
         return true;
@@ -330,10 +330,10 @@ bool DiskTable::Delete(const std::string& pk, uint32_t idx) {
         std::string combine_key2 = CombineKeyTs(pk, 0);
         batch.DeleteRange(cf_hs_[idx + 1], rocksdb::Slice(combine_key1), rocksdb::Slice(combine_key2));
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     rocksdb::Status s = db_->Write(write_opts_, &batch);
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     if (s.ok()) {
         offset_.fetch_add(1, std::memory_order_relaxed);
         return true;
@@ -376,10 +376,10 @@ void DiskTable::GcHead() {
         // ro.prefix_same_as_start = true;
         ro.pin_data = true;
         std::unique_ptr<rocksdb::Iterator> it(db_->NewIterator(ro, cf_hs_[idx + 1]));
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it->SeekToFirst();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek_to_first += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek_to_first += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         const auto& indexs = inner_index->GetIndex();
         if (indexs.size() > 1) {
             bool need_ttl = false;
@@ -407,10 +407,10 @@ void DiskTable::GcHead() {
                 rocksdb::Slice cur_pk;
                 uint64_t ts = 0;
                 uint32_t ts_idx = 0;
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 auto k = it->key();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 ParseKeyAndTs(true, k, &cur_pk, &ts, &ts_idx);
                 if (!last_pk.empty() && cur_pk.compare(rocksdb::Slice(last_pk)) == 0) {
                     auto ttl_iter = ttl_map.find(ts_idx);
@@ -430,11 +430,11 @@ void DiskTable::GcHead() {
                     for (const auto& kv : delete_key_map) {
                         std::string combine_key1 = CombineKeyTs(rocksdb::Slice(last_pk), kv.second, kv.first);
                         std::string combine_key2 = CombineKeyTs(rocksdb::Slice(last_pk), 0, kv.first);
-                        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                         rocksdb::Status s = db_->DeleteRange(write_opts_, cf_hs_[idx + 1], rocksdb::Slice(combine_key1),
                                                              rocksdb::Slice(combine_key2));
-                        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                        if (FLAG_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                         if (!s.ok()) {
                             PDLOG(WARNING, "Delete failed. tid %u pid %u msg %s", id_, pid_, s.ToString().c_str());
                         }
@@ -444,19 +444,19 @@ void DiskTable::GcHead() {
                     key_cnt.insert(std::make_pair(ts_idx, 1));
                     last_pk.assign(cur_pk.data(), cur_pk.size());
                 }
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 it->Next();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
             }
             for (const auto& kv : delete_key_map) {
                 std::string combine_key1 = CombineKeyTs(last_pk, kv.second, kv.first);
                 std::string combine_key2 = CombineKeyTs(last_pk, 0, kv.first);
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 rocksdb::Status s = db_->DeleteRange(write_opts_, cf_hs_[idx + 1], rocksdb::Slice(combine_key1),
                                                      rocksdb::Slice(combine_key2));
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 if (!s.ok()) {
                     PDLOG(WARNING, "Delete failed. tid %u pid %u msg %s", id_, pid_, s.ToString().c_str());
                 }
@@ -472,42 +472,42 @@ void DiskTable::GcHead() {
             while (it->Valid()) {
                 rocksdb::Slice cur_pk;
                 uint64_t ts = 0;
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 auto k = it->key();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 ParseKeyAndTs(k, &cur_pk, &ts);
                 if (!last_pk.empty() && cur_pk.compare(rocksdb::Slice(last_pk)) == 0) {
                     if (ts == 0 || count < ttl_num) {
-                        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                         it->Next();
-                        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                        if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                         count++;
                         continue;
                     } else {
                         std::string combine_key1 = CombineKeyTs(cur_pk, ts);
                         std::string combine_key2 = CombineKeyTs(cur_pk, 0);
-                        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                         rocksdb::Status s = db_->DeleteRange(write_opts_, cf_hs_[idx + 1], rocksdb::Slice(combine_key1),
                                                              rocksdb::Slice(combine_key2));
-                        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                        if (FLAG_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.write += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                         if (!s.ok()) {
                             PDLOG(WARNING, "Delete failed. tid %u pid %u msg %s", id_, pid_, s.ToString().c_str());
                         }
-                        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                         it->Seek(rocksdb::Slice(combine_key2));
-                        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                     }
                 } else {
                     count = 1;
                     last_pk.assign(cur_pk.data(), cur_pk.size());
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it->Next();
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 }
             }
         }
@@ -624,28 +624,28 @@ bool DiskTableIterator::Valid() {
     }
     rocksdb::Slice cur_pk;
     uint32_t cur_ts_idx = UINT32_MAX;
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     auto k = it_->key();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     ParseKeyAndTs(has_ts_idx_, k, &cur_pk, &ts_, &cur_ts_idx);
     int ret = cur_pk.compare(rocksdb::Slice(pk_));
     return has_ts_idx_ ? ret == 0 && cur_ts_idx == ts_idx_ : ret == 0;
 }
 
 void DiskTableIterator::Next() {
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Next();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     return;
 }
 
 openmldb::base::Slice DiskTableIterator::GetValue() const {
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     rocksdb::Slice value = it_->value();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.value += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.value += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     return openmldb::base::Slice(value.data(), value.size());
 }
 
@@ -656,32 +656,32 @@ uint64_t DiskTableIterator::GetKey() const { return ts_; }
 void DiskTableIterator::SeekToFirst() {
     if (has_ts_idx_) {
         std::string combine_key = CombineKeyTs(pk_, UINT64_MAX, ts_idx_);
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine_key));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     } else {
         std::string combine_key = CombineKeyTs(pk_, UINT64_MAX);
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine_key));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     }
 }
 
 void DiskTableIterator::Seek(const uint64_t ts) {
     if (has_ts_idx_) {
         std::string combine_key = CombineKeyTs(pk_, ts, ts_idx_);
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine_key));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     } else {
         std::string combine_key = CombineKeyTs(pk_, ts);
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine_key));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     }
 }
 
@@ -726,26 +726,26 @@ bool DiskTableTraverseIterator::Valid() {
 }
 
 void DiskTableTraverseIterator::Next() {
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Next();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     for (; it_->Valid(); ) {
         std::string last_pk = pk_;
         uint32_t cur_ts_idx = UINT32_MAX;
         traverse_cnt_++;
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (last_pk == pk_) {
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
                 traverse_cnt_--;
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 it_->Next();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 continue;
             }
             record_idx_++;
@@ -753,10 +753,10 @@ void DiskTableTraverseIterator::Next() {
             record_idx_ = 0;
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
                 traverse_cnt_--;
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 it_->Next();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 continue;
             }
             record_idx_ = 1;
@@ -772,10 +772,10 @@ void DiskTableTraverseIterator::Next() {
 }
 
 openmldb::base::Slice DiskTableTraverseIterator::GetValue() const {
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     rocksdb::Slice value = it_->value();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.value += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.value += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     return openmldb::base::Slice(value.data(), value.size());
 }
 
@@ -784,10 +784,10 @@ std::string DiskTableTraverseIterator::GetPK() const { return pk_; }
 uint64_t DiskTableTraverseIterator::GetKey() const { return ts_; }
 
 void DiskTableTraverseIterator::SeekToFirst() {
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->SeekToFirst();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek_to_first += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek_to_first += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     record_idx_ = 1;
     for (; it_->Valid(); ) {
         uint32_t cur_ts_idx = UINT32_MAX;
@@ -795,16 +795,16 @@ void DiskTableTraverseIterator::SeekToFirst() {
         if (FLAGS_max_traverse_cnt > 0 && traverse_cnt_ >= FLAGS_max_traverse_cnt) {
             break;
         }
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (has_ts_idx_ && cur_ts_idx != ts_idx_) {
-            if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
             it_->Next();
-            if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-            if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+            if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
             continue;
         }
         if (IsExpired()) {
@@ -821,10 +821,10 @@ void DiskTableTraverseIterator::Seek(const std::string& pk, uint64_t time) {
     } else {
         combine = CombineKeyTs(rocksdb::Slice(pk), time);
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Seek(rocksdb::Slice(combine));
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     if (expire_value_.ttl_type == ::openmldb::storage::TTLType::kLatestTime) {
         record_idx_ = 0;
         for (; it_->Valid(); ) {
@@ -833,17 +833,17 @@ void DiskTableTraverseIterator::Seek(const std::string& pk, uint64_t time) {
             if (FLAGS_max_traverse_cnt > 0 && traverse_cnt_ >= FLAGS_max_traverse_cnt) {
                 break;
             }
-            if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
             auto k = it_->key();
-            if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-            if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+            if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
             ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
             if (pk_ == pk) {
                 if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Next();
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                     continue;
                 }
                 record_idx_++;
@@ -852,10 +852,10 @@ void DiskTableTraverseIterator::Seek(const std::string& pk, uint64_t time) {
                     break;
                 }
                 if (ts_ > time) {
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Next();
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                     continue;
                 }
             } else {
@@ -873,24 +873,24 @@ void DiskTableTraverseIterator::Seek(const std::string& pk, uint64_t time) {
             if (FLAGS_max_traverse_cnt > 0 && traverse_cnt_ >= FLAGS_max_traverse_cnt) {
                 break;
             }
-            if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
             auto k = it_->key();
-            if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-            if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+            if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
             ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
             if (pk_ == pk) {
                 if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Next();
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                     continue;
                 }
                 if (ts_ > time) {
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Next();
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                     continue;
                 }
                 if (IsExpired()) {
@@ -898,10 +898,10 @@ void DiskTableTraverseIterator::Seek(const std::string& pk, uint64_t time) {
                 }
             } else {
                 if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Next();
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                     continue;
                 }
                 if (IsExpired()) {
@@ -920,16 +920,16 @@ void DiskTableTraverseIterator::NextPK() {
     std::string combine;
     if (has_ts_idx_) {
         std::string combine_key = CombineKeyTs(rocksdb::Slice(last_pk), 0, ts_idx_);
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine_key));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     } else {
         std::string combine_key = CombineKeyTs(rocksdb::Slice(last_pk), 0);
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine_key));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     }
     record_idx_ = 1;
     while (it_->Valid()) {
@@ -938,17 +938,17 @@ void DiskTableTraverseIterator::NextPK() {
         if (FLAGS_max_traverse_cnt > 0 && traverse_cnt_ >= FLAGS_max_traverse_cnt) {
             break;
         }
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (pk_ != last_pk) {
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 it_->Next();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 continue;
             }
             if (!IsExpired()) {
@@ -958,24 +958,24 @@ void DiskTableTraverseIterator::NextPK() {
                 std::string combine;
                 if (has_ts_idx_) {
                     std::string combine_key = CombineKeyTs(rocksdb::Slice(last_pk), 0, ts_idx_);
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Seek(rocksdb::Slice(combine_key));
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 } else {
                     std::string combine_key = CombineKeyTs(rocksdb::Slice(last_pk), 0);
-                    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                     it_->Seek(rocksdb::Slice(combine_key));
-                    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 }
                 record_idx_ = 1;
             }
         } else {
-            if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
             it_->Next();
-            if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-            if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+            if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         }
     }
 }
@@ -1040,15 +1040,15 @@ DiskTableKeyIterator::~DiskTableKeyIterator() {
 }
 
 void DiskTableKeyIterator::SeekToFirst() {
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->SeekToFirst();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek_to_first += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek_to_first += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     uint32_t cur_ts_idx = UINT32_MAX;
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     auto k = it_->key();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
 }
 
@@ -1060,31 +1060,31 @@ void DiskTableKeyIterator::NextPK() {
     } else {
         combine_key = CombineKeyTs(rocksdb::Slice(last_pk), 0);
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Seek(rocksdb::Slice(combine_key));
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     while (it_->Valid()) {
         uint32_t cur_ts_idx = UINT32_MAX;
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (pk_ != last_pk) {
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 it_->Next();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 continue;
             }
             break;
         } else {
-            if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
             it_->Next();
-            if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-            if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+            if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         }
     }
 }
@@ -1099,23 +1099,23 @@ void DiskTableKeyIterator::Seek(const std::string& pk) {
     } else {
         combine = CombineKeyTs(rocksdb::Slice(pk), tmp_ts);
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Seek(rocksdb::Slice(combine));
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     for (; it_->Valid(); ) {
         uint32_t cur_ts_idx = UINT32_MAX;
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (pk_ == pk) {
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
-                if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
                 it_->Next();
-                if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-                if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+                if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+                if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
                 continue;
             }
         }
@@ -1186,16 +1186,16 @@ bool DiskTableRowIterator::Valid() const {
 
 void DiskTableRowIterator::Next() {
     ResetValue();
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Next();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     for (; it_->Valid(); it_->Next()) {
         uint32_t cur_ts_idx = UINT32_MAX;
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (row_pk_ == pk_) {
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
@@ -1220,10 +1220,10 @@ const ::hybridse::codec::Row& DiskTableRowIterator::GetValue() {
         return row_;
     }
     valid_value_ = true;
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     auto v = it_->value();
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.value += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.value += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     size_t size = v.size();
     int8_t* copyed_row_data = reinterpret_cast<int8_t*>(malloc(size));
     memcpy(copyed_row_data, v.data(), size);
@@ -1241,16 +1241,16 @@ void DiskTableRowIterator::Seek(const uint64_t& key) {
         } else {
             combine = CombineKeyTs(rocksdb::Slice(row_pk_), tmp_ts);
         }
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it_->Seek(rocksdb::Slice(combine));
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         for (; it_->Valid(); it_->Next()) {
             uint32_t cur_ts_idx = UINT32_MAX;
-            if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
             auto k = it_->key();
-            if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-            if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+            if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+            if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
             ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
             if (pk_ == row_pk_) {
                 if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
@@ -1283,16 +1283,16 @@ void DiskTableRowIterator::SeekToFirst() {
     } else {
         combine = CombineKeyTs(rocksdb::Slice(row_pk_), tmp_ts);
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it_->Seek(rocksdb::Slice(combine));
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     for (; it_->Valid(); it_->Next()) {
         uint32_t cur_ts_idx = UINT32_MAX;
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it_->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx_, k, &pk_, &ts_, &cur_ts_idx);
         if (pk_ == row_pk_) {
             if (has_ts_idx_ && (cur_ts_idx != ts_idx_)) {
@@ -1365,20 +1365,20 @@ int DiskTable::GetCount(uint32_t index, const std::string& pk, uint64_t& count) 
     } else {
         combine = CombineKeyTs(rocksdb::Slice(pk), tmp_ts);
     }
-    if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
     it->Seek(rocksdb::Slice(combine));
-    if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-    if (FLAG_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+    if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+    if (FLAGS_manual_clocking) io_time.seek += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
 
     count = 0;
     for (; it->Valid(); ) {
         uint32_t cur_ts_idx = UINT32_MAX;
         rocksdb::Slice cur_pk;
         uint64_t cur_ts = 0;
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         auto k = it->key();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.key += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
         ParseKeyAndTs(has_ts_idx, k, &cur_pk, &cur_ts, &cur_ts_idx);
         if (cur_pk.compare(rocksdb::Slice(pk)) == 0) {
             if (has_ts_idx && cur_ts_idx != ts_idx) {
@@ -1388,10 +1388,10 @@ int DiskTable::GetCount(uint32_t index, const std::string& pk, uint64_t& count) 
         } else {
             break;
         }
-        if (FLAG_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.t1 = std::chrono::system_clock::now();
         it->Next();
-        if (FLAG_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
-        if (FLAG_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
+        if (FLAGS_manual_clocking) io_time.t2 = std::chrono::system_clock::now();
+        if (FLAGS_manual_clocking) io_time.next += std::chrono::duration_cast<std::chrono::nanoseconds>(io_time.t2 - io_time.t1).count();
     }
 
     return 0;
