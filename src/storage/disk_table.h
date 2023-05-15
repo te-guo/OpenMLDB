@@ -437,7 +437,7 @@ class DiskTable : public Table {
     int GetCount(uint32_t index, const std::string& pk, uint64_t& count) override; // NOLINT
 
     std::shared_ptr<std::string> GetStatistics() override;
-    static void InitRocksDBProfile(bool manual);
+    static void InitRocksDBProfile();
     static void DumpRocksDBProfile();
     static std::string GetRocksDBProfile();
 

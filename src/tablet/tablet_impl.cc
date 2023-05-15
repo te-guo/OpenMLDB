@@ -313,7 +313,7 @@ bool TabletImpl::Init(const std::string& zk_cluster, const std::string& zk_path,
     MallocExtension* tcmalloc = MallocExtension::instance();
     tcmalloc->SetMemoryReleaseRate(FLAGS_mem_release_rate);
 #endif
-    ::openmldb::storage::DiskTable::InitRocksDBProfile(false);
+    ::openmldb::storage::DiskTable::InitRocksDBProfile();
     dump_rocksDB_thread.ok = true;
     dump_rocksDB_thread.last_dump = std::chrono::system_clock::now();
     return true;
