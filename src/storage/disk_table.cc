@@ -48,6 +48,7 @@ static rocksdb::Options hdd_option_template;
 static bool options_template_initialized = false;
 static struct{
     bool flag = false;
+    long long cnt[200];
     std::chrono::time_point<std::chrono::system_clock> t1;
     std::chrono::time_point<std::chrono::system_clock> t2;
     long long write = 0;
@@ -1404,7 +1405,7 @@ std::shared_ptr<std::string> DiskTable::GetStatistics() {
 }
 
 void DiskTable::InitRocksDBProfile(){
-    rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+    rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
     rocksdb::get_perf_context()->Reset();
     rocksdb::get_iostats_context()->Reset();
     io_time.flag = true;
@@ -1431,14 +1432,19 @@ std::string DiskTable::GetRocksDBProfile(){
 
     rocksdb::SetPerfLevel(rocksdb::PerfLevel::kDisable);
     ss << rocksdb::get_perf_context()->ToString() << '\n' << rocksdb::get_iostats_context()->ToString();
-    while(ss >> str){
-        if(str == ",")
+    for(int i = 0; ss >> str; i++){
+        if(str == ","){
+            i--;
             continue;
+        }
         item = str;
         ss >> str >> x;
-        output += item + '\t' + std::to_string(x) + '\n';
+        io_time.cnt[i] += x;
+        output += item + '\t' + std::to_string(io_time.cnt[i]) + '\n';
     }
-    rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+    rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
+    rocksdb::get_perf_context()->Reset();
+    rocksdb::get_iostats_context()->Reset();
 
     output += "\n\n";
     return output;
