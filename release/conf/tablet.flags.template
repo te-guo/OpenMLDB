@@ -101,3 +101,4 @@
 --write_buffer_mb=32
 --stats_dump_period_sec=15
 --manual_clocking=false
+--perf_level=1

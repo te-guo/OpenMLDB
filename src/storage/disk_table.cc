@@ -38,6 +38,7 @@ DECLARE_uint32(max_log_file_size);
 DECLARE_uint32(keep_log_file_num);
 
 DECLARE_uint32(stats_dump_period_sec);
+DECLARE_uint32(perf_level);
 DECLARE_bool(manual_clocking);
 
 namespace openmldb {
@@ -57,6 +58,8 @@ static struct{
     long long seek = 0;
     long long next = 0;
     long long seek_to_first = 0;
+
+    rocksdb::DB* db;
 } io_time;
 
 DiskTable::DiskTable(const std::string& name, uint32_t id, uint32_t pid, const std::map<std::string, uint32_t>& mapping,
@@ -224,6 +227,7 @@ bool DiskTable::Init() {
     options_.error_if_exists = false;
     options_.create_missing_column_families = true;
     rocksdb::Status s = rocksdb::DB::Open(options_, path, cf_ds_, &cf_hs_, &db_);
+    io_time.db = db_;
     if (!s.ok()) {
         PDLOG(WARNING, "rocksdb open failed. tid %u pid %u error %s", id_, pid_, s.ToString().c_str());
         return false;
@@ -1405,7 +1409,10 @@ std::shared_ptr<std::string> DiskTable::GetStatistics() {
 }
 
 void DiskTable::InitRocksDBProfile(){
-    rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
+    if(FLAGS_perf_level == 1)
+        rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+    else
+        rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
     rocksdb::get_perf_context()->Reset();
     rocksdb::get_iostats_context()->Reset();
     io_time.flag = true;
@@ -1442,11 +1449,16 @@ std::string DiskTable::GetRocksDBProfile(){
         io_time.cnt[i] += x;
         output += item + '\t' + std::to_string(io_time.cnt[i]) + '\n';
     }
-    rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
+    if(FLAGS_perf_level == 1)
+        rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTimeExceptForMutex);
+    else
+        rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
     rocksdb::get_perf_context()->Reset();
     rocksdb::get_iostats_context()->Reset();
 
-    output += "\n\n";
+    output += "\n";
+    if(io_time.db != nullptr)
+        output += io_time.db->GetOptions().statistics->ToString();
     return output;
 }
 

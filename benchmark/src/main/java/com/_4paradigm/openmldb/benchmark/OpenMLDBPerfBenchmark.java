@@ -224,14 +224,14 @@ public class OpenMLDBPerfBenchmark {
             numberKey += pkList.get(pos);
         }
         try {
-            if(BenchmarkConfig.INSERT_BEFORE_REQUEST) {
-                Util.putOneData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get("mt"), windowSize, executor);
-            }
             PreparedStatement stat = Util.getPreparedStatement(deployName, numberKey, tableSchema.get("mt"), executor);
             ResultSet resultSet = stat.executeQuery();
             /*resultSet.next();
             Map<String, String> val = Util.extractResultSet(resultSet);
             int a = 0;*/
+            if(BenchmarkConfig.INSERT_BEFORE_REQUEST) {
+                Util.putOneData(pkList, BenchmarkConfig.PK_NUM, tableSchema.get("mt"), windowSize, executor);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
