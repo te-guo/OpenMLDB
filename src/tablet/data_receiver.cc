@@ -65,7 +65,7 @@ bool DataReceiver::PartValidation(int part_id) {
     return true;
 }
 
-bool DataReceiver::BulkLoad(const std::shared_ptr<storage::MemTable>& table,
+bool DataReceiver::BulkLoad(const std::shared_ptr<storage::Table>& table,
                             const ::openmldb::api::BulkLoadRequest* request) {
     std::unique_lock<std::mutex> ul(mu_);
     DLOG_ASSERT(tid_ == table->GetId() && pid_ == table->GetPid());

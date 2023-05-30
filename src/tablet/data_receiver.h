@@ -36,7 +36,7 @@ class DataReceiver {
     bool WriteBinlogToReplicator(const std::shared_ptr<replica::LogReplicator>& replicator,
                                  const ::openmldb::api::BulkLoadRequest* request);
 
-    bool BulkLoad(const std::shared_ptr<storage::MemTable>& table, const ::openmldb::api::BulkLoadRequest* request);
+    bool BulkLoad(const std::shared_ptr<storage::Table>& table, const ::openmldb::api::BulkLoadRequest* request);
 
  private:
     bool PartValidation(int part_id);

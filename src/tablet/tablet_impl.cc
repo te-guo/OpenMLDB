@@ -5600,18 +5600,11 @@ void TabletImpl::GetBulkLoadInfo(RpcController* controller, const ::openmldb::ap
         response->set_msg("table is loading");
         return;
     }
-    if (table->GetStorageMode() != ::openmldb::common::kMemory) {
-        response->set_code(::openmldb::base::ReturnCode::kOperatorNotSupport);
-        response->set_msg("only support mem_table");
-        PDLOG(WARNING, "only support mem_table. tid %u, pid %u", request->tid(), request->pid());
-        return;
-    }
 
     // TODO(hw): BulkLoadInfoResponse
     //  TableIndex is inside Table, so let table fulfill the response for us.
     DLOG(INFO) << "GetBulkLoadInfo for " << table->GetId() << "-" << table->GetPid();
-    auto* mem_table = dynamic_cast<MemTable*>(table.get());
-    mem_table->GetBulkLoadInfo(response);
+    table->GetBulkLoadInfo(response);
 
     response->set_code(::openmldb::base::kOk);
     response->set_msg("ok");
@@ -5742,10 +5735,10 @@ void TabletImpl::BulkLoad(RpcController* controller, const ::openmldb::api::Bulk
         LOG(INFO) << tid << "-" << pid << " get index region, do bulk load";
         // table must disable gc when index region loading, but we can't know which is the first index region part,
         // set it every time.
-        std::dynamic_pointer_cast<MemTable>(table)->SetExpire(false);
+        table->SetExpire(false);
         // The request may have both data & index region(the first index rpc, contains some rest data), it's ok.
         // BulkLoad() only load index region to table.
-        if (!bulk_load_mgr_.BulkLoad(std::dynamic_pointer_cast<MemTable>(table), request)) {
+        if (!bulk_load_mgr_.BulkLoad(table, request)) {
             response->set_code(::openmldb::base::ReturnCode::kWriteDataFailed);
             response->set_msg("bulk load to table failed");
             LOG(WARNING) << tid << "-" << pid << " " << response->msg();
@@ -5761,7 +5754,7 @@ void TabletImpl::BulkLoad(RpcController* controller, const ::openmldb::api::Bulk
     if (request->eof()) {
         LOG(INFO) << tid << "-" << pid << " get bulk load eof(means success), clean up the data receiver";
         bulk_load_mgr_.RemoveReceiver(tid, pid);
-        std::dynamic_pointer_cast<MemTable>(table)->SetExpire(true);
+        table->SetExpire(true);
     }
 }
 

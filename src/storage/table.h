@@ -180,6 +180,11 @@ class Table {
 
     virtual std::shared_ptr<std::string> GetStatistics() = 0;
 
+    virtual void SetExpire(bool is_expire) = 0;
+    virtual bool GetBulkLoadInfo(::openmldb::api::BulkLoadInfoResponse* response) = 0;
+    virtual bool BulkLoad(const std::vector<DataBlock*>& data_blocks,
+                  const ::google::protobuf::RepeatedPtrField<::openmldb::api::BulkLoadIndex>& indexes) = 0;
+
  protected:
     void UpdateTTL();
     bool InitFromMeta();

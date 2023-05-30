@@ -75,6 +75,7 @@ DiskTable::DiskTable(const std::string& name, uint32_t id, uint32_t pid, const s
     }
     write_opts_.disableWAL = FLAGS_disable_wal;
     db_ = nullptr;
+    enable_gc_ = true;
 }
 
 DiskTable::DiskTable(const ::openmldb::api::TableMeta& table_meta, const std::string& table_path)
@@ -91,6 +92,7 @@ DiskTable::DiskTable(const ::openmldb::api::TableMeta& table_meta, const std::st
     write_opts_.disableWAL = FLAGS_disable_wal;
     db_ = nullptr;
     table_meta_ = std::make_shared<::openmldb::api::TableMeta>(table_meta);
+    enable_gc_ = true;
 }
 
 DiskTable::~DiskTable() {
@@ -365,6 +367,7 @@ bool DiskTable::Get(uint32_t idx, const std::string& pk, uint64_t ts, std::strin
 bool DiskTable::Get(const std::string& pk, uint64_t ts, std::string& value) { return Get(0, pk, ts, value); }
 
 void DiskTable::SchedGc() {
+    if (!enable_gc_.load(std::memory_order_relaxed)) return;
     GcHead();
     UpdateTTL();
 }
@@ -1460,6 +1463,99 @@ std::string DiskTable::GetRocksDBProfile(){
     if(io_time.db != nullptr)
         output += io_time.db->GetOptions().statistics->ToString();
     return output;
+}
+
+bool DiskTable::GetBulkLoadInfo(::openmldb::api::BulkLoadInfoResponse* response) {
+    response->set_seg_cnt(1);
+
+    // TODO(hw): out of range will get -1, only a temporary solution.
+    uint32_t idx = 0;
+    int32_t pos;
+    while ((pos = table_index_.GetInnerIndexPos(idx)) != -1) {
+        response->add_inner_index_pos(pos);
+        idx++;
+    }
+    // repeated InnerIndexSt, all index, even not ready
+    auto inner_indexes = table_index_.GetAllInnerIndex();
+    for (auto& i : *inner_indexes) {
+        i->GetId();
+        auto pb = response->add_inner_index();
+        for (const auto& index_def : i->GetIndex()) {
+            auto new_def = pb->add_index_def();
+            new_def->set_is_ready(index_def->GetStatus() == IndexStatus::kReady);
+            new_def->set_ts_idx(-1);
+            auto ts_col = index_def->GetTsColumn();
+            if (ts_col) {
+                new_def->set_ts_idx(ts_col->GetId());
+            }
+        }
+    }
+    // repeated InnerSegments
+    for (decltype(inner_indexes->size()) inner_id = 0; inner_id < inner_indexes->size(); ++inner_id) {
+        auto pb_segments = response->add_inner_segments();
+        auto pb_seg = pb_segments->add_segment();
+        pb_seg->set_ts_cnt((*inner_indexes)[inner_id]->GetIndex().size());
+        for(auto index: (*inner_indexes)[inner_id]->GetIndex()){
+            auto ts_col = index->GetTsColumn();
+            auto pb_entry = pb_seg->add_ts_idx_map();
+            pb_entry->set_key(ts_col->GetId());
+            pb_entry->set_value(ts_col->GetId());
+        }
+    }
+    return true;
+}
+bool DiskTable::BulkLoad(const std::vector<DataBlock*>& data_blocks,
+                        const ::google::protobuf::RepeatedPtrField<::openmldb::api::BulkLoadIndex>& indexes) {
+    // data_block[i] is the block which id == i
+    rocksdb::WriteBatch batch;
+    for (int i = 0; i < indexes.size(); ++i) {
+        const auto& inner_index = indexes.Get(i);
+        auto real_idx = inner_index.inner_index_id();
+        for (int j = 0; j < inner_index.segment_size(); ++j) {
+            const auto& segment_index = inner_index.segment(j);
+            auto seg_idx = segment_index.id();
+            auto segment = cf_hs_[real_idx + 1];
+            for (int key_idx = 0; key_idx < segment_index.key_entries_size(); ++key_idx) {
+                const auto& key_entries = segment_index.key_entries(key_idx);
+                auto pk = Slice(key_entries.key());
+                for (int key_entry_idx = 0; key_entry_idx < key_entries.key_entry_size(); ++key_entry_idx) {
+                    const auto& key_entry = key_entries.key_entry(key_entry_idx);
+                    auto key_entry_id = key_entry.key_entry_id();
+                    for (int time_idx = 0; time_idx < key_entry.time_entry_size(); ++time_idx) {
+                        const auto& time_entry = key_entry.time_entry(time_idx);
+                        auto* block =
+                            time_entry.block_id() < data_blocks.size() ? data_blocks[time_entry.block_id()] : nullptr;
+                        if (block == nullptr) {
+                            // TODO(hw): error handle
+                            LOG(INFO) << "block info mismatch";
+                            return false;
+                        }
+
+                        VLOG(1) << "do segment(" << real_idx << "-" << seg_idx << ") put, key" << pk.ToString()
+                                << ", time " << time_entry.time() << ", key_entry_id " << key_entry_id << ", block id "
+                                << time_entry.block_id();
+                        std::string combine_key;
+                        if (table_index_.GetInnerIndex(real_idx)->GetIndex().size() > 1) {
+                            combine_key = CombineKeyTs(rocksdb::Slice(pk.ToString()), time_entry.time(), key_entry_id);
+                        } else {
+                            combine_key = CombineKeyTs(rocksdb::Slice(pk.ToString()), time_entry.time());
+                        }
+                        rocksdb::Slice spk = rocksdb::Slice(combine_key);
+                        batch.Put(segment, spk, rocksdb::Slice(block->data, block->size));
+                    }
+                }
+            }
+        }
+    }
+    auto s = db_->Write(write_opts_, &batch);
+    if (s.ok()) {
+        offset_.fetch_add(1, std::memory_order_relaxed);
+        return true;
+    } else {
+        return false;
+    }
+
+    return true;
 }
 
 }  // namespace storage

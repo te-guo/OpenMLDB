@@ -441,6 +441,11 @@ class DiskTable : public Table {
     static void DumpRocksDBProfile();
     static std::string GetRocksDBProfile();
 
+    inline void SetExpire(bool is_expire) override { enable_gc_.store(is_expire, std::memory_order_relaxed); }
+    bool GetBulkLoadInfo(::openmldb::api::BulkLoadInfoResponse* response) override;
+    bool BulkLoad(const std::vector<DataBlock*>& data_blocks,
+                  const ::google::protobuf::RepeatedPtrField<::openmldb::api::BulkLoadIndex>& indexes) override;
+
  private:
     rocksdb::DB* db_;
     rocksdb::WriteOptions write_opts_;
@@ -450,6 +455,7 @@ class DiskTable : public Table {
     KeyTSComparator cmp_;
     std::atomic<uint64_t> offset_;
     std::string table_path_;
+    std::atomic<bool> enable_gc_;
 };
 
 }  // namespace storage

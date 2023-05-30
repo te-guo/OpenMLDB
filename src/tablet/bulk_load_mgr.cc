@@ -40,7 +40,7 @@ bool BulkLoadMgr::AppendData(uint32_t tid, uint32_t pid, const ::openmldb::api::
     return true;
 }
 
-bool BulkLoadMgr::BulkLoad(const std::shared_ptr<storage::MemTable>& table,
+bool BulkLoadMgr::BulkLoad(const std::shared_ptr<storage::Table>& table,
                            const ::openmldb::api::BulkLoadRequest* request) {
     auto data_receiver = GetDataReceiver(table->GetId(), table->GetPid(), DO_NOT_CREATE);
     if (!data_receiver) {

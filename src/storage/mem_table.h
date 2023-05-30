@@ -82,10 +82,10 @@ class MemTable : public Table {
 
     bool Put(uint64_t time, const std::string& value, const Dimensions& dimensions) override;
 
-    bool GetBulkLoadInfo(::openmldb::api::BulkLoadInfoResponse* response);
+    bool GetBulkLoadInfo(::openmldb::api::BulkLoadInfoResponse* response) override;
 
     bool BulkLoad(const std::vector<DataBlock*>& data_blocks,
-                  const ::google::protobuf::RepeatedPtrField<::openmldb::api::BulkLoadIndex>& indexes);
+                  const ::google::protobuf::RepeatedPtrField<::openmldb::api::BulkLoadIndex>& indexes) override;
 
     bool Delete(const std::string& pk, uint32_t idx) override;
 
@@ -121,7 +121,7 @@ class MemTable : public Table {
 
     inline uint32_t GetSegCnt() const { return seg_cnt_; }
 
-    inline void SetExpire(bool is_expire) { enable_gc_.store(is_expire, std::memory_order_relaxed); }
+    inline void SetExpire(bool is_expire) override { enable_gc_.store(is_expire, std::memory_order_relaxed); }
 
     uint64_t GetExpireTime(const TTLSt& ttl_st) override;
 
